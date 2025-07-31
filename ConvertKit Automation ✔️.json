@@ -1,0 +1,133 @@
+{
+  "name": "ConvertKit Automation ✔️",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "15a5b68c-8211-44e5-b0f2-c656b44596a5",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -500,
+        -20
+      ],
+      "id": "c7ff010c-0e86-4d77-bc94-fdf4ca986210",
+      "name": "Webhook",
+      "webhookId": "15a5b68c-8211-44e5-b0f2-c656b44596a5"
+    },
+    {
+      "parameters": {
+        "collection": "companies",
+        "options": {},
+        "query": "={ \"companyId\": \"{{ $json.body.companyId}}\" }\n"
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [
+        -280,
+        -20
+      ],
+      "id": "226da3a6-0614-4ed5-bf15-9044f4d20ebb",
+      "name": "MongoDB",
+      "credentials": {
+        "mongoDb": {
+          "id": "wJqF4xYe2dg8oddX",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kit.com/v4/broadcasts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Kit-Api-Key",
+              "value": "={{ $('MongoDB').item.json.convertkit.apiSecret }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"subject\": \"{{ $json.subject }}\",\n  \"content\": {{ $json.content }},\n  \"subscriber_filter\": [\n    {\n      \"tag_ids\": [9022545]\n    }\n  ],\n  \"public\": true,\n  \"preview_text\": \"Here's our latest update!\",\n  \"description\": \"Weekly newsletter update\",\n  \"send_at\": \"2025-07-12T19:56:00Z\"\n\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        160,
+        -20
+      ],
+      "id": "40d3a31c-bb3d-4648-a4c1-6cda0a2a8038",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// In a Code node\nconst htmlContent = $('Webhook').item.json.body.content;\nconst escapedContent = JSON.stringify(htmlContent); // Escapes quotes and special characters\n\nreturn [\n  {\n    json: {\n      subject: $('Webhook').item.json.body.subject,\n      content: escapedContent,\n      subscriber_filter: [{ tag_ids: [9022545] }],\n      public: true,\n      preview_text: \"Here's our latest update!\",\n      description: \"Weekly newsletter update\",\n      send_at: \"2025-07-12T19:30:00Z\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -60,
+        -20
+      ],
+      "id": "0fdf6b0f-1689-4081-b925-0eb5a7163e6c",
+      "name": "Code"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "MongoDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MongoDB": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b895203c-2c81-496b-a02b-66b4531dbfb5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6fb67cef8a7bafcc819b2eca3509e2d7c68c301a2d4ad12c7a1591cd9809294a"
+  },
+  "id": "qlKglCN5We1Iucoa",
+  "tags": []
+}

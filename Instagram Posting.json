@@ -1,0 +1,255 @@
+{
+  "name": "Instagram Posting",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -260,
+        -20
+      ],
+      "id": "7c2b38e7-8ea6-44ee-8341-fa88a3d633b1",
+      "name": "Telegram Trigger",
+      "webhookId": "df52bdb6-7300-46f8-b06e-61434da6e9f6",
+      "credentials": {
+        "telegramApi": {
+          "id": "G9orC9jNLG0KapUm",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "='1h2vjxAmXn5UwjWFIWbcnscbCwMHgda-s' in parents and mimeType = 'video/mp4'",
+        "returnAll": true,
+        "filter": {},
+        "options": {
+          "fields": [
+            "id",
+            "name",
+            "webViewLink"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -20,
+        -20
+      ],
+      "id": "f9c2dd48-9287-4079-af66-648b2c52117c",
+      "name": "Search files and folders",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "TYsOZqcQ7BDzYU6L",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Initialize the output array\nconst output = [];\n\n// Loop through all input items\nfor (const item of $input.all()) {\n  // Get the webview link from the input (using 'webViewLink' as the field name)\n  const webviewLink = item.json.webViewLink || '';\n\n  // If no link is found, return an error\n  if (!webviewLink) {\n    output.push({\n      json: {\n        input: item.json,\n        error: 'No webview link found in input field \"webViewLink\"'\n      }\n    });\n    continue;\n  }\n\n  // Regular expression to extract FILE_ID from Google Drive webview link\n  const fileIdMatch = webviewLink.match(/\\/d\\/([a-zA-Z0-9_-]+)/);\n\n  // Check if FILE_ID was found\n  if (fileIdMatch && fileIdMatch[1]) {\n    const fileId = fileIdMatch[1];\n    // Construct the direct download link\n    const downloadLink = `https://drive.google.com/uc?export=download&id=${fileId}`;\n    \n    // Add the download link to the output\n    output.push({\n      json: {\n        webViewLink: webviewLink,\n        downloadLink: downloadLink,\n        fileId: fileId\n      }\n    });\n  } else {\n    // If no FILE_ID is found, return an error\n    output.push({\n      json: {\n        webViewLink: webviewLink,\n        downloadLink: null,\n        error: 'Failed to extract FILE_ID from webview link. Ensure the link is in the format: https://drive.google.com/file/d/FILE_ID/view'\n      }\n    });\n  }\n}\n\n// Return the output\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        -20
+      ],
+      "id": "82c8144e-6ffb-4282-93e1-1414865e2276",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v21.0/17841476154797063/media",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"media_type\": \"REELS\",\n  \"video_url\": \"{{ $json.downloadLink }}\",\n  \"caption\": \"Check out my latest Reel!\",\n  \"access_token\": \"EAASuxHMyebwBPLcXubeJwbB8helJFVBrkpveKIcuPQt2hjJ3EeFX3qQsHIDEFhkhoXnvGZCZAKUo5Ki5ZBh6FvAT7mw49ufwoxzvtVUWM443eSWpbSAxu4sZAnJdq12RtYDciCNtHCuaP0pn8iZBjIcZCWu97VfJyNqx552ebZBVLcVCUXYsQEzELJHlx9qI2LL\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        380,
+        -20
+      ],
+      "id": "554a95cd-abdc-4590-b0c1-b7b93eceff06",
+      "name": "Create Container"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v21.0/17841476154797063/media_publish",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $('Edit Fields').item.json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "EAASuxHMyebwBPGRelDZBDsIZBclDPLLAZADGZBIiosIl4REoxrpNQNcLYrmZCRfvVeyd7UdmMKGqUqv8ZCoWxHEUsaLyMOFYjn0y4VkLfb2uv9xYQVivPrxiCZCwAzjZCwrkiAai6Ypd6MYGjRuNtZBfZAisBISk7K8AvTX0qzJTVnTBBdePbistZAq7gvIdjCT7HjG"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1140,
+        -40
+      ],
+      "id": "08c28646-092d-4f38-a153-475cc5719fcf",
+      "name": "Publish the Media Object"
+    },
+    {
+      "parameters": {
+        "amount": 1.5,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        -40
+      ],
+      "id": "b463c298-5600-44a2-a49f-436770b16769",
+      "name": "Wait",
+      "webhookId": "7d8db482-7e50-4ebe-b510-3c760b094cc8"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0a1bf715-766c-434a-8e27-24dfd32e6300",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        600,
+        -20
+      ],
+      "id": "34d77787-e11a-41ad-b9e3-a43be736c56c",
+      "name": "Edit Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Create Container",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Container": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish the Media Object": {
+      "main": [
+        []
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Publish the Media Object",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f09b2ace-e4f2-41a7-a6a6-0db19fe74f26",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6fb67cef8a7bafcc819b2eca3509e2d7c68c301a2d4ad12c7a1591cd9809294a"
+  },
+  "id": "b5ianedOb3YiRCvl",
+  "tags": []
+}

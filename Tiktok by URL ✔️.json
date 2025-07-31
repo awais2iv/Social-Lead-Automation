@@ -1,0 +1,433 @@
+{
+  "name": "Tiktok by URL ✔️",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1360,
+        220
+      ],
+      "id": "9d40cbe2-f746-45ee-9179-5d3e65602452",
+      "name": "Telegram Trigger",
+      "webhookId": "8f31249a-6e78-4445-9c37-3806bd8f0e93",
+      "credentials": {
+        "telegramApi": {
+          "id": "G9orC9jNLG0KapUm",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "='1h2vjxAmXn5UwjWFIWbcnscbCwMHgda-s' in parents and mimeType = 'video/mp4'",
+        "returnAll": true,
+        "filter": {},
+        "options": {
+          "fields": [
+            "id",
+            "name",
+            "webViewLink"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1120,
+        180
+      ],
+      "id": "1f653229-1aa1-48ea-ac5b-8022a6204096",
+      "name": "Search files and folders",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "TYsOZqcQ7BDzYU6L",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -700,
+        300
+      ],
+      "id": "b9cc1008-9058-4579-8afa-b399cd5a7716",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.tiktokapis.com/v2/oauth/token/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "client_key",
+              "value": "sbaw9mfghpaefiw7y6"
+            },
+            {
+              "name": "client_secret",
+              "value": "hzWkVWmYLWnKRjGBC9e204KpUJFkhEBZ"
+            },
+            {
+              "name": "grant_type",
+              "value": "refresh_token"
+            },
+            {
+              "name": "refresh_token",
+              "value": "={{ $json.refresh_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -40,
+        60
+      ],
+      "id": "6ed07dc2-8194-455c-83a1-57736448954b",
+      "name": "access token from refresh token"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.webViewLink }}",
+          "mode": "url"
+        },
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -840,
+        20
+      ],
+      "id": "a702edb6-375e-44a7-ae95-572d1ba63ea6",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "TYsOZqcQ7BDzYU6L",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "collection": "=RefreshToken",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [
+        -220,
+        60
+      ],
+      "id": "db4fc194-65c5-4667-8664-9686dbd39377",
+      "name": "MongoDB",
+      "credentials": {
+        "mongoDb": {
+          "id": "wJqF4xYe2dg8oddX",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Function node: Convert webViewLink to webContentLink\nreturn items.map(item => {\n  const viewLink = item.json.webViewLink; // e.g. https://drive.google.com/file/d/FILE_ID/view?usp=...\n  const fileIdMatch = viewLink.match(/\\/d\\/([a-zA-Z0-9_-]+)/);\n  const fileId = fileIdMatch ? fileIdMatch[1] : null;\n  \n  item.json.webContentLink = fileId\n    ? `https://drive.google.com/uc?export=download&id=${fileId}`\n    : null;\n  \n  return item;\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -580,
+        60
+      ],
+      "id": "383590ff-404b-4161-a035-8d41c72d40e5",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.tiktokapis.com/v2/post/publish/inbox/video/init/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json; charset=UTF-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"post_info\": {\n    \"title\": \"Automated video upload\",\n    \"privacy_level\": \"SELF_ONLY\",\n    \"disable_duet\": false,\n    \"disable_comment\": false,\n    \"disable_stitch\": false\n  },\n  \"source_info\": {\n    \"source\": \"PULL_FROM_URL\",\n    \"video_url\": \"{{ $('Code1').item.json.proxyUrl }}\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        180,
+        60
+      ],
+      "id": "75ff0c4e-6d86-430e-8e41-1d136b73decc",
+      "name": "init pull from url"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const dl = $input.first().json.webContentLink;\n  item.json.proxyUrl = `https://awaisdev.pro/api/gdrive-proxy?url=${encodeURIComponent(dl)}`;\n  return item;\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        60
+      ],
+      "id": "89779608-0d21-4895-9f85-6d1789ea7959",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.tiktokapis.com/v2/post/publish/status/fetch/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json; charset=UTF-8"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('access token from refresh token').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"publish_id\": \"{{ $json.data.publish_id }}\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        80
+      ],
+      "id": "92dbe41f-f782-432b-8fb4-efad7c2796f7",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {
+    "Telegram Trigger": [
+      {
+        "json": {
+          "update_id": 931923308,
+          "message": {
+            "message_id": 6,
+            "from": {
+              "id": 5553193634,
+              "is_bot": false,
+              "first_name": "Muhammad",
+              "last_name": "Awais",
+              "username": "Btwimawais",
+              "language_code": "en"
+            },
+            "chat": {
+              "id": 5553193634,
+              "first_name": "Muhammad",
+              "last_name": "Awais",
+              "username": "Btwimawais",
+              "type": "private"
+            },
+            "date": 1752520326,
+            "text": "Hell"
+          }
+        }
+      }
+    ],
+    "Search files and folders": [
+      {
+        "json": {
+          "id": "1EJK_siRJvDaifEx5fUGxVK9QRFuxsrte",
+          "name": "VID-20240606-WA0117.mp4",
+          "webViewLink": "https://drive.google.com/file/d/1EJK_siRJvDaifEx5fUGxVK9QRFuxsrte/view?usp=drivesdk"
+        }
+      },
+      {
+        "json": {
+          "id": "1TzaLbcUEGZtbkKMX3hBrLhKyTINqF3Cu",
+          "name": "VID-20240410-WA0128.mp4",
+          "webViewLink": "https://drive.google.com/file/d/1TzaLbcUEGZtbkKMX3hBrLhKyTINqF3Cu/view?usp=drivesdk"
+        }
+      }
+    ],
+    "MongoDB": [
+      {
+        "json": {
+          "_id": "68767a01eff88e23c93ec566",
+          "access_token": "act.4pHD3RBIfudYTlYToaYHIiSK3oMGlzptB6NIDbcWXjy20o0HG2jrVK7PTwyK!5913.va",
+          "expires_in": 86400,
+          "open_id": "-000azPK3bdKL1K_C52aZarwKqNCp6_h9KmU",
+          "refresh_expires_in": 31536000,
+          "refresh_token": "rft.gHrpjPoHaPpBJONnlam3vqpZYQwNJ4GOVOcoP6Ryjuo2gPCJenJzJpD1yBBK!5949.va",
+          "scope": "user.info.basic,video.publish,video.upload",
+          "token_type": "Bearer"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "access token from refresh token": {
+      "main": [
+        [
+          {
+            "node": "init pull from url",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MongoDB": {
+      "main": [
+        [
+          {
+            "node": "access token from refresh token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "init pull from url": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "MongoDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "06b3ba3f-2538-4cb1-a5a7-f22880a393c9",
+  "meta": {
+    "instanceId": "6fb67cef8a7bafcc819b2eca3509e2d7c68c301a2d4ad12c7a1591cd9809294a"
+  },
+  "id": "2rBbSr70CcBtsLRl",
+  "tags": []
+}
