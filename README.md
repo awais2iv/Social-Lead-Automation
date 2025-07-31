@@ -1,2 +1,12 @@
 # Social-Lead-Automation
-N8N workflows automating lead scraping, LinkedIn outreach, Instagram &amp; TikTok posting, and ConvertKit email marketing. Streamlines multi-channel marketing, content posting, and personalized cold outreach to boost growth and engagement—all in one unified automation hub.
+A collection of N8N automation workflows for multi-channel marketing and lead management, including:
+
+Lead scraping and management with Google Sheets integration
+
+Automated LinkedIn connection requests and personalized cold outreach messaging
+
+Social media content posting on Instagram (via Facebook Graph API) and TikTok (using native API)
+
+Email marketing automation with ConvertKit integration
+
+Designed to streamline and automate marketing, outreach, and content distribution across platforms in a unified, easy-to-use repository.
